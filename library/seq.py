@@ -1,6 +1,23 @@
-from typing import Union, Iterator, Tuple
+from typing import Union, Iterator, Tuple, Dict
 import numpy as np
 from functools import reduce
+from Bio.Align import PairwiseAligner
+from Bio.Align import substitution_matrices
+import itertools
+
+GAP_PENALTY = -100
+GAP_EXTEND_PENALTY = -10
+END_GAP_PENALTY = -2
+END_GAP_EXTEND_PENALTY = -1
+
+score_matrix = np.empty((16, 16))
+
+for i, j in itertools.product(range(0, 16), range(0, 16)):
+    score_matrix[i, j] = 1 if i & j else -1
+
+aligner = PairwiseAligner(substitution_matrix=score_matrix, end_open_gap_score=END_GAP_PENALTY,
+                          end_extend_gap_score=END_GAP_EXTEND_PENALTY, internal_open_gap_score=GAP_PENALTY, internal_extend_gap_score=GAP_EXTEND_PENALTY)
+
 seq_read_dict = dict(
     A=1,
     C=2,
@@ -47,6 +64,21 @@ seq_write_tuple = ("-",) + tuple(char for char,
                                  _ in sorted(seq_read_dict.items(), key=lambda x: x[1]))
 
 
+def np_or_maxlen(arr1: np.array, arr2: np.array) -> np.array:
+    if len(arr1) < len(arr2):
+        arr1.resize(len(arr2))
+    elif len(arr2) < len(arr1):
+        arr2.resize(len(arr1))
+    return arr1 | arr2
+
+
+def merge_insertions(ins1: Dict[int, np.array], ins2: Dict[int, np.array]) -> Dict[int, np.array]:
+    result = {**ins1, **ins2}
+    result.update({key: np_or_maxlen(ins1[key], ins2[key])
+                   for key in ins1.keys() & ins2.keys()})
+    return result
+
+
 class Seq:
     """
     Store a sequence in a compact way as np.array of bytes
@@ -58,24 +90,42 @@ class Seq:
     T <~> 0b1000
     """
 
-    def __init__(self, data: np.array) -> None:
+    def __init__(self, data: np.array, insertions: Dict[int, np.array]) -> None:
         self.data = data
+        self.insertions = insertions
 
     @classmethod
     def from_str(cls, sequence: str) -> 'Seq':
-        seq = cls(np.empty(len(sequence), dtype="byte"))
+        seq = cls(np.empty(len(sequence), dtype="int32"), {})
         for i, el in enumerate(map(seq_read_dict.get, sequence)):
             seq.data[i] = el
         return seq
 
     def __or__(self, other: 'Seq') -> 'Seq':
-        return Seq(self.data | other.data)
+        return Seq(self.data | other.data, merge_insertions(self.insertions, other.insertions))
 
-    def __str__(self) -> str:
-        return "".join(map(seq_write_tuple.__getitem__, self.data))
+    # def __str__(self) -> str:
+    #     return "".join(map(seq_write_tuple.__getitem__, self.data))
 
     def __iter__(self) -> Iterator:
         return self.data.__iter__()
+
+    def align(self, ref: 'Seq') -> None:
+        alignment = aligner.align(self.data, ref.data)[0].aligned
+        aligned_data = np.zeros_like(ref.data)
+        self.insertions = {}
+        prev_self_end = 0
+        prev_ref_end = 0
+        for (self_start, self_end), (ref_start, ref_end) in zip(*alignment):
+            aligned_data[ref_start:ref_end] = self.data[self_start:self_end]
+            if self_start > prev_self_end:
+                self.insertions[prev_ref_end] = self.data[prev_self_end: self_start]
+            prev_self_end = self_end
+            preve_ref_end = ref_end
+        else:
+            if prev_self_end < len(self.data):
+                self.insertions[prev_ref_end] = self.data[prev_self_end:]
+        self.data = aligned_data
 
 
 def differences(seq1: Seq, seq2: Seq) -> Iterator[Tuple[int, int, int]]:
