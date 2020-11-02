@@ -135,7 +135,7 @@ def differences(seq1: Seq, seq2: Seq) -> Tuple[List[Tuple[int, int, int]], Dict[
     Additionally returns a pair of dictionaries for different insertions for each sequence
     """
     replacements = [(i, nuc1, nuc2) for i, (nuc1, nuc2) in enumerate(
-        zip(seq1, seq2)) if not nuc1 & nuc2 and nuc1 and nuc2]
+        zip(seq1, seq2)) if not nuc1 & nuc2 and (nuc1 or nuc2)]
     ins1 = seq1.insertions
     ins2 = seq2.insertions
     common_insertions = {key: (ins1[key], ins2[key])
