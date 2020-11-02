@@ -1,4 +1,4 @@
-from typing import Union, Iterator, Tuple, Dict
+from typing import Union, Iterator, Tuple, Dict, List
 import numpy as np
 from functools import reduce
 from Bio.Align import PairwiseAligner
@@ -128,10 +128,21 @@ class Seq:
         self.data = aligned_data
 
 
-def differences(seq1: Seq, seq2: Seq) -> Iterator[Tuple[int, int, int]]:
+def differences(seq1: Seq, seq2: Seq) -> Tuple[List[Tuple[int, int, int]], Dict[int, np.array], Dict[int, np.array]]:
     """
-    Returns an iterator over incompatible nucleotides of arguments with indices
+    Returns a list of (index, nucleotide1, nucleotide2) of different nucleotides.
 
-    Iterator element: (index, nucleotide1, nucleotide2)
+    Additionally returns a pair of dictionaries for different insertions for each sequence
     """
-    return ((i, nuc1, nuc2) for i, (nuc1, nuc2) in enumerate(zip(seq1, seq2)) if not nuc1 & nuc2 and nuc1 and nuc2)
+    replacements = [(i, nuc1, nuc2) for i, (nuc1, nuc2) in enumerate(
+        zip(seq1, seq2)) if not nuc1 & nuc2 and nuc1 and nuc2]
+    ins1 = seq1.insertions
+    ins2 = seq2.insertions
+    common_insertions = {key: (ins1[key], ins2[key])
+                         for key in ins1.keys() & ins2.keys()}
+    ins1 = {key: ins1[key] for key in ins1 if key not in ins2}
+    ins1.update({key: val[0] for key, val in common_insertions.items()})
+    ins2 = {key: ins2[key] for key in ins2 if key not in ins1}
+    ins2.update({key: val[0] for key, val in common_insertions.items()})
+
+    return replacements, ins1, ins2
