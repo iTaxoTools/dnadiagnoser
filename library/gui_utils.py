@@ -43,11 +43,30 @@ class LabeledEntry():
     """
 
     def __init__(self, parent: tk.Widget, *, label: str):
-        self.frame = tk.Frame(parent)
-        self.label = tk.Label(self.frame, text=label)
+        self.frame = ttk.Frame(parent)
+        self.label = ttk.Label(self.frame, text=label)
         self.var = tk.StringVar()
-        self.entry = tk.Entry(self.frame, textvariable=self.var)
+        self.entry = ttk.Entry(self.frame, textvariable=self.var)
         self.frame.columnconfigure(1, weight=1)
         self.label.grid(column=0, row=0)
         self.entry.grid(column=1, row=0)
+        self.grid = self.frame.grid
+
+
+class LabeledCombobox():
+    """
+    Group of a label, Combobox and a string variable
+    """
+
+    def __init__(self, parent: tk.Widget, *, label: str, values: Tuple[str], readonly: bool):
+        self.frame = ttk.Frame(parent)
+        self.label = ttk.Label(self.frame, text=label)
+        self.var = tk.StringVar()
+        self.combobox = ttk.Combobox(
+            self.frame, textvariable=self.var, values=values)
+        if readonly:
+            self.combobox.configure(state='readonly')
+        self.frame.columnconfigure(1, weight=1)
+        self.label.grid(column=0, row=0)
+        self.combobox.grid(column=1, row=0)
         self.grid = self.frame.grid
