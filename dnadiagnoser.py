@@ -7,11 +7,16 @@ import numpy as np
 from functools import reduce
 import itertools
 import os.path
+from library.gui_utils import *
+import tkinter.messagebox
 
 
 with open(os.path.join('data', 'dnadiagnoser_homo_sapiens_reference.fas')) as file:
-    name, seq = file.readline().split()
-    reference_sequence = Seq.from_str(seq)
+    references: Dict[str, Seq] = {}
+    for line in file:
+        name, _, sequence = line.partition('\t')
+        if name and sequence:
+            references[name] = Seq.from_str(sequence)
 
 
 def combine_sequences(series: pd.Series) -> Seq:
@@ -28,12 +33,14 @@ def show_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array]
     return "\t".join((replacements, insertions1, insertions2))
 
 
-def main() -> None:
-    input = sys.argv[1]
-    outfile = sys.argv[2]
-
-    table = pd.read_csv(input, delimiter='\t', index_col='specimen_voucher', converters={
+def process_files(infile: str, outfile: str, reference_name: str) -> None:
+    if not infile:
+        raise ValueError('Input file is not given')
+    if not outfile:
+        raise ValueError('Output file is not given')
+    table = pd.read_csv(infile, delimiter='\t', index_col='specimen_voucher', converters={
                         'sequence': Seq.from_str})
+    reference_sequence = references[reference_name]
     table['sequence'].apply(
         lambda seq: seq.align(reference_sequence))
     table = table.groupby('species')['sequence'].agg(combine_sequences)
@@ -45,6 +52,49 @@ def main() -> None:
             repl, ins1, ins2 = differences(table[species1], table[species2])
             print(species1, species2, show_differences(
                 repl, ins1, ins2), sep='\t', file=output)
+
+
+def launch_gui() -> None:
+    root = tk.Tk()
+    root.rowconfigure(0, weight=1)
+    root.columnconfigure(0, weight=1)
+    root.columnconfigure(2, weight=1)
+
+    inputchooser = FileChooser(root, label="Input file", mode="open")
+    outputchooser = FileChooser(root, label="Output file", mode="save")
+
+    reference_cmb = LabeledCombobox(
+        root, label="Reference sequence", values=list(references.keys()), readonly=True)
+
+    def process() -> None:
+        try:
+            process_files(inputchooser.file_var.get(),
+                          outputchooser.file_var.get(), reference_cmb.var.get())
+        except Exception as ex:
+            tkinter.messagebox.showerror("Error", str(ex))
+
+    process_btn = ttk.Button(root, text="Process", command=process)
+
+    inputchooser.grid(row=0, column=0, sticky="nsew")
+    outputchooser.grid(row=0, column=2, sticky="nsew")
+
+    reference_cmb.grid(row=1, column=1)
+    process_btn.grid(row=2, column=1)
+
+    root.mainloop()
+
+
+def main() -> None:
+    if len(sys.argv) >= 3:
+        input = sys.argv[1]
+        output = sys.argv[2]
+        try:
+            reference_name = sys.argv[3]
+        except IndexError:
+            reference_name = "Homo_sapiens_COI"
+        process_files(input, output, reference_name)
+    else:
+        launch_gui()
 
 
 if __name__ == "__main__":

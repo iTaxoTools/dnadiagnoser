@@ -42,7 +42,7 @@ class LabeledEntry():
     Group of a label, entry and a string variable
     """
 
-    def __init__(self, parent: tk.Widget, *, label: str):
+    def __init__(self, parent: tk.Misc, *, label: str):
         self.frame = ttk.Frame(parent)
         self.label = ttk.Label(self.frame, text=label)
         self.var = tk.StringVar()
@@ -58,7 +58,7 @@ class LabeledCombobox():
     Group of a label, Combobox and a string variable
     """
 
-    def __init__(self, parent: tk.Widget, *, label: str, values: Tuple[str], readonly: bool):
+    def __init__(self, parent: tk.Misc, *, label: str, values: List[str], readonly: bool):
         self.frame = ttk.Frame(parent)
         self.label = ttk.Label(self.frame, text=label)
         self.var = tk.StringVar()
