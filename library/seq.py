@@ -96,6 +96,7 @@ class Seq:
 
     @classmethod
     def from_str(cls, sequence: str) -> 'Seq':
+        sequence = sequence.strip("-Nn?\n\t ")
         seq = cls(np.empty(len(sequence), dtype="int32"), {})
         for i, el in enumerate(map(seq_read_dict.get, sequence)):
             seq.data[i] = el
