@@ -66,6 +66,8 @@ class LabeledCombobox():
             self.frame, textvariable=self.var, values=values)
         if readonly:
             self.combobox.configure(state='readonly')
+            if values:
+                self.combobox.current(0)
         self.frame.columnconfigure(1, weight=1)
         self.label.grid(column=0, row=0)
         self.combobox.grid(column=1, row=0)
