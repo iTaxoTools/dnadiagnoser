@@ -6,9 +6,10 @@ import pandas as pd
 import numpy as np
 from functools import reduce
 import itertools
+import os.path
 
 
-with open('data/dnadiagnoser_homo_sapiens_reference.fas') as file:
+with open(os.path.join('data', 'dnadiagnoser_homo_sapiens_reference.fas')) as file:
     name, seq = file.readline().split()
     reference_sequence = Seq.from_str(seq)
 
