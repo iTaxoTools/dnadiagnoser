@@ -99,7 +99,11 @@ class Seq:
         sequence = sequence.strip("-Nn?\n\t ")
         seq = cls(np.empty(len(sequence), dtype="int32"), {})
         for i, el in enumerate(map(seq_read_dict.get, sequence)):
-            seq.data[i] = el
+            try:
+                seq.data[i] = el
+            except TypeError as ex:
+                raise ValueError(
+                    f"Unexpected nucleotide: {sequence[i]}") from ex
         return seq
 
     def __or__(self, other: 'Seq') -> 'Seq':
