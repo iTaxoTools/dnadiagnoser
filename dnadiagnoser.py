@@ -77,6 +77,8 @@ def launch_gui() -> None:
                           outputchooser.file_var.get(), reference_cmb.var.get())
         except Exception as ex:
             tkinter.messagebox.showerror("Error", str(ex))
+        else:
+            tkinter.messagebox.showinfo("Done", "Analysis is complete")
 
     process_btn = ttk.Button(root, text="Process", command=process)
 
