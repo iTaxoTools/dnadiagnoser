@@ -9,6 +9,7 @@ import itertools
 import os.path
 from library.gui_utils import *
 import tkinter.messagebox
+import warnings
 
 
 with open(os.path.join('data', 'dnadiagnoser_homo_sapiens_reference.fas')) as file:
@@ -17,6 +18,12 @@ with open(os.path.join('data', 'dnadiagnoser_homo_sapiens_reference.fas')) as fi
         name, _, sequence = line.partition('\t')
         if name and sequence:
             references[name] = Seq.from_str(sequence)
+
+typos = dict(
+    specimen_voucher='specimenid',
+    specimen_id='specimenid',
+    sequences='sequence'
+)
 
 
 def combine_sequences(series: pd.Series) -> Seq:
@@ -33,13 +40,27 @@ def show_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array]
     return "\t".join((replacements, insertions1, insertions2))
 
 
+def load_table(infile: str) -> pd.DataFrame:
+    table = pd.read_csv(infile, delimiter='\t').rename(
+        columns=str.casefold).rename(columns=typos)
+    if 'sequence' not in table.columns:
+        raise ValueError("'sequences' or 'sequence' column is missing")
+    if 'specimenid' not in table.columns:
+        warnings.warn("Specimen IDs are not detected")
+    else:
+        table.set_index('specimenid', inplace=True)
+    if len(table.columns) < 2:
+        raise ValueError("'species' or another column need to be present")
+    table['sequence'] = table['sequence'].apply(Seq.from_str)
+    return table
+
+
 def process_files(infile: str, outfile: str, reference_name: str) -> None:
     if not infile:
         raise ValueError('Input file is not given')
     if not outfile:
         raise ValueError('Output file is not given')
-    table = pd.read_csv(infile, delimiter='\t', index_col='specimen_voucher', converters={
-                        'sequence': Seq.from_str})
+    table = load_table(infile)
     reference_sequence = references[reference_name]
     alignment_displays = table['sequence'].apply(
         lambda seq: seq.align(reference_sequence))
@@ -73,8 +94,11 @@ def launch_gui() -> None:
 
     def process() -> None:
         try:
-            process_files(inputchooser.file_var.get(),
-                          outputchooser.file_var.get(), reference_cmb.var.get())
+            with warnings.catch_warnings(record=True) as warns:
+                process_files(inputchooser.file_var.get(),
+                              outputchooser.file_var.get(), reference_cmb.var.get())
+                for w in warns:
+                    tkinter.messagebox.showwarning("Warning", str(w.message))
         except Exception as ex:
             tkinter.messagebox.showerror("Error", str(ex))
         else:
