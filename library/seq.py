@@ -115,13 +115,18 @@ class Seq:
     def __iter__(self) -> Iterator:
         return self.data.__iter__()
 
-    def align(self, ref: 'Seq') -> None:
-        alignment = aligner.align(self.data, ref.data)[0].aligned
+    def align(self, ref: 'Seq') -> str:
+        alignment = aligner.align(ref.data, self.data)[0]
+        aligned = alignment.aligned
+        alignment.target = "".join(
+            map(seq_write_tuple.__getitem__, alignment.target))
+        alignment.query = "".join(
+            map(seq_write_tuple.__getitem__, alignment.query))
         aligned_data = np.zeros_like(ref.data)
         self.insertions = {}
         prev_self_end = 0
         prev_ref_end = 0
-        for (self_start, self_end), (ref_start, ref_end) in zip(*alignment):
+        for (ref_start, ref_end), (self_start, self_end) in zip(*aligned):
             aligned_data[ref_start:ref_end] = self.data[self_start:self_end]
             if self_start > prev_self_end:
                 self.insertions[prev_ref_end] = self.data[prev_self_end: self_start]
@@ -131,6 +136,7 @@ class Seq:
             if prev_self_end < len(self.data):
                 self.insertions[prev_ref_end] = self.data[prev_self_end:]
         self.data = aligned_data
+        return format(alignment)
 
 
 def differences(seq1: Seq, seq2: Seq) -> Tuple[List[Tuple[int, int, int]], Dict[int, np.array], Dict[int, np.array]]:

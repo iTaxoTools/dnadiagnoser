@@ -41,10 +41,15 @@ def process_files(infile: str, outfile: str, reference_name: str) -> None:
     table = pd.read_csv(infile, delimiter='\t', index_col='specimen_voucher', converters={
                         'sequence': Seq.from_str})
     reference_sequence = references[reference_name]
-    table['sequence'].apply(
+    alignment_displays = table['sequence'].apply(
         lambda seq: seq.align(reference_sequence))
     table = table.groupby('species')['sequence'].agg(combine_sequences)
     with open(outfile, mode='w') as output:
+        print("Alignments:", file=output)
+        for specimen, alignment_str in alignment_displays.items():
+            print(specimen, file=output)
+            print(alignment_str, file=output)
+        output.write("\n")
         print("species 1\tspecies 2\treplacements\tinsertions 1\tinsertions 2", file=output)
         for species1, species2 in itertools.product(table.index, table.index):
             if species1 == species2:
