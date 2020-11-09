@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from library.seq import Seq, seq_write_tuple, differences, Dict, List, Tuple
+from library.seq import Seq, seq_write_tuple, differences
 import sys
 import pandas as pd
 import numpy as np
@@ -10,6 +10,7 @@ import os.path
 from library.gui_utils import *
 import tkinter.messagebox
 import warnings
+from typing import Optional, Dict, List, Tuple
 
 
 with open(os.path.join('data', 'dnadiagnoser_homo_sapiens_reference.fas')) as file:
@@ -40,44 +41,64 @@ def show_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array]
     return "\t".join((replacements, insertions1, insertions2))
 
 
-def load_table(infile: str) -> pd.DataFrame:
-    table = pd.read_csv(infile, delimiter='\t').rename(
-        columns=str.casefold).rename(columns=typos)
-    if 'sequence' not in table.columns:
-        raise ValueError("'sequences' or 'sequence' column is missing")
-    if 'specimenid' not in table.columns:
-        warnings.warn("Specimen IDs are not detected")
-    else:
-        table.set_index('specimenid', inplace=True)
-    if len(table.columns) < 2:
-        raise ValueError("'species' or another column need to be present")
-    table['sequence'] = table['sequence'].apply(Seq.from_str)
-    return table
+class DnaProcessor():
 
+    def __init__(self) -> None:
+        self.infile: Optional[str] = None
+        self.table: Optional[pd.DataFrame] = None
 
-def process_files(infile: str, outfile: str, reference_name: str) -> None:
-    if not infile:
-        raise ValueError('Input file is not given')
-    if not outfile:
-        raise ValueError('Output file is not given')
-    table = load_table(infile)
-    reference_sequence = references[reference_name]
-    alignment_displays = table['sequence'].apply(
-        lambda seq: seq.align(reference_sequence))
-    table = table.groupby('species')['sequence'].agg(combine_sequences)
-    with open(outfile, mode='w') as output:
-        print("Alignments:", file=output)
-        for specimen, alignment_str in alignment_displays.items():
-            print(specimen, file=output)
-            print(alignment_str, file=output)
-        output.write("\n")
-        print("species 1\tspecies 2\treplacements\tinsertions 1\tinsertions 2", file=output)
-        for species1, species2 in itertools.product(table.index, table.index):
-            if species1 == species2:
-                continue
-            repl, ins1, ins2 = differences(table[species1], table[species2])
-            print(species1, species2, show_differences(
-                repl, ins1, ins2), sep='\t', file=output)
+    def load_table(self, infile: str) -> None:
+        table = pd.read_csv(infile, delimiter='\t').rename(
+            columns=str.casefold).rename(columns=typos)
+        if 'sequence' not in table.columns:
+            raise ValueError("'sequences' or 'sequence' column is missing")
+        if 'specimenid' not in table.columns:
+            warnings.warn("Specimen IDs are not detected")
+        else:
+            table.set_index('specimenid', inplace=True)
+        if len(table.columns) < 2:
+            raise ValueError("'species' or another column need to be present")
+        table['sequence'] = table['sequence'].apply(Seq.from_str)
+        self.table = table
+        self.infile = infile
+
+    def process_files(self, infile: str, outfile: str, reference_name: str, column: str, selection: List[str]) -> None:
+        if not infile:
+            raise ValueError('Input file is not given')
+        if not outfile:
+            raise ValueError('Output file is not given')
+        if self.infile != infile or self.table is None:
+            self.load_table(infile)
+            column = "species"
+            selection = []
+        assert(self.table is not None)
+        reference_sequence = references[reference_name]
+        alignment_displays = self.table['sequence'].apply(
+            lambda seq: seq.align(reference_sequence))
+        table = self.table.groupby(
+            column)['sequence'].agg(combine_sequences)
+        if selection:
+            table = table.filter(items=selection)
+        with open(outfile, mode='w') as output:
+            print("Alignments:", file=output)
+            for specimen, alignment_str in alignment_displays.items():
+                if not selection or self.table[column][specimen] in selection:
+                    print(specimen, file=output)
+                    print(alignment_str, file=output)
+            output.write("\n")
+            print(
+                f"{column} 1\t{column} 2\treplacements\tinsertions 1\tinsertions 2", file=output)
+            for species1, species2 in itertools.product(table.index, table.index):
+                if species1 == species2:
+                    continue
+                repl, ins1, ins2 = differences(
+                    table[species1], table[species2])
+                print(species1, species2, show_differences(
+                    repl, ins1, ins2), sep='\t', file=output)
+
+    def choices(self) -> Dict[str, List[str]]:
+        assert(self.table is not None)
+        return {column_name: list(self.table[column_name].unique()) for column_name in self.table.columns if column_name != "sequence"}
 
 
 def launch_gui() -> None:
@@ -92,11 +113,27 @@ def launch_gui() -> None:
     reference_cmb = LabeledCombobox(
         root, label="Reference sequence", values=list(references.keys()), readonly=True)
 
+    processor = DnaProcessor()
+
+    column_selector = ColumnSelector(root)
+
+    def load() -> None:
+        try:
+            if (infile := inputchooser.file_var.get()):
+                processor.load_table(infile)
+                column_selector.set_columns(processor.choices())
+        except Exception as ex:
+            tkinter.messagebox.showerror("Error", str(ex))
+
     def process() -> None:
         try:
             with warnings.catch_warnings(record=True) as warns:
-                process_files(inputchooser.file_var.get(),
-                              outputchooser.file_var.get(), reference_cmb.var.get())
+                if (selection := column_selector.selection()):
+                    column, selected = selection
+                else:
+                    column, selected = ('species', [])
+                processor.process_files(inputchooser.file_var.get(),
+                                        outputchooser.file_var.get(), reference_cmb.var.get(), column, selected)
                 for w in warns:
                     tkinter.messagebox.showwarning("Warning", str(w.message))
         except Exception as ex:
@@ -105,12 +142,15 @@ def launch_gui() -> None:
             tkinter.messagebox.showinfo("Done", "Analysis is complete")
 
     process_btn = ttk.Button(root, text="Process", command=process)
+    load_btn = ttk.Button(root, text="Load", command=load)
 
     inputchooser.grid(row=0, column=0, sticky="nsew")
     outputchooser.grid(row=0, column=2, sticky="nsew")
 
     reference_cmb.grid(row=1, column=1)
     process_btn.grid(row=2, column=1)
+    load_btn.grid(row=2, column=0)
+    column_selector.grid(row=3, column=0, sticky="nsew")
 
     root.mainloop()
 
@@ -123,7 +163,8 @@ def main() -> None:
             reference_name = sys.argv[3]
         except IndexError:
             reference_name = "Homo_sapiens_COI"
-        process_files(input, output, reference_name)
+        processor = DnaProcessor()
+        processor.process_files(input, output, reference_name, "species", [])
     else:
         launch_gui()
 

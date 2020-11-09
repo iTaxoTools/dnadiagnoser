@@ -2,7 +2,7 @@ import os.path
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.ttk as ttk
-from typing import Literal, Any, Dict, Tuple, List
+from typing import Literal, Any, Dict, Tuple, List, Optional
 
 
 class FileChooser():
@@ -94,15 +94,22 @@ class Listbox():
 
 class ColumnSelector():
 
-    def __init__(self, parent: tk.Misc, columns: Dict[str, List[str]]) -> None:
+    def __init__(self, parent: tk.Misc) -> None:
         self.notebook = ttk.Notebook(parent)
+        self.lists: List[Listbox] = []
+        self.grid = self.notebook.grid
+
+    def set_columns(self, columns: Dict[str, List[str]]) -> None:
+        for i in range(self.notebook.index("end")):
+            self.notebook.forget(i)
         self.lists = []
         for column_name in columns:
             self.lists.append(Listbox(self.notebook, height=10,
                                       values=columns[column_name], selectmode="extended"))
             self.notebook.add(self.lists[-1].listbox, text=column_name)
-        self.grid = self.notebook.grid
 
-    def selection(self) -> Tuple[str, List[str]]:
+    def selection(self) -> Optional[Tuple[str, List[str]]]:
+        if self.notebook.index("end") == 0:
+            return None
         i = self.notebook.index("current")
         return (self.notebook.tab(i)["text"], self.lists[i].selection())
