@@ -72,3 +72,37 @@ class LabeledCombobox():
         self.label.grid(column=0, row=0)
         self.combobox.grid(column=1, row=0)
         self.grid = self.frame.grid
+
+
+class Listbox():
+    """
+    Wrapper for a read-only tk.Listbox with a method that returns the selection
+    """
+
+    def __init__(self, parent: tk.Misc, *, height: int, selectmode: Literal["browse", "extended"], values: List[str]) -> None:
+        self.list = values
+        self.listbox = tk.Listbox(
+            parent, height=height, selectmode=selectmode, listvariable=tk.StringVar(value=values))
+        self.grid = self.listbox.grid
+
+    def selection(self) -> List[str]:
+        """
+        Returns the list of items that are currently selected
+        """
+        return [self.list[i] for i in self.listbox.curselection()]
+
+
+class ColumnSelector():
+
+    def __init__(self, parent: tk.Misc, columns: Dict[str, List[str]]) -> None:
+        self.notebook = ttk.Notebook(parent)
+        self.lists = []
+        for column_name in columns:
+            self.lists.append(Listbox(self.notebook, height=10,
+                                      values=columns[column_name], selectmode="extended"))
+            self.notebook.add(self.lists[-1].listbox, text=column_name)
+        self.grid = self.notebook.grid
+
+    def selection(self) -> Tuple[str, List[str]]:
+        i = self.notebook.index("current")
+        return (self.notebook.tab(i)["text"], self.lists[i].selection())
