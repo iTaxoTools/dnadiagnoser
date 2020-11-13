@@ -15,7 +15,7 @@ import pandas as pd
 from library.gui_utils import *
 from library.seq import Seq, differences, seq_write_tuple
 
-with open(os.path.join('data', 'dnadiagnoser_homo_sapiens_reference.fas')) as file:
+with open(os.path.join('data', 'reference_sequences.tab')) as file:
     references: Dict[str, Seq] = {}
     for line in file:
         name, _, sequence = line.partition('\t')
