@@ -9,11 +9,13 @@ GAP_PENALTY = -100
 GAP_EXTEND_PENALTY = -10
 END_GAP_PENALTY = -2
 END_GAP_EXTEND_PENALTY = -1
+MATCH_SCORE = 1
+MISMATCH_SCORE = -1
 
 score_matrix = np.empty((16, 16))
 
 for i, j in itertools.product(range(0, 16), range(0, 16)):
-    score_matrix[i, j] = 1 if i & j else -1
+    score_matrix[i, j] = MATCH_SCORE if i & j else MISMATCH_SCORE
 
 aligner = PairwiseAligner(substitution_matrix=score_matrix, end_open_gap_score=END_GAP_PENALTY,
                           end_extend_gap_score=END_GAP_EXTEND_PENALTY, internal_open_gap_score=GAP_PENALTY, internal_extend_gap_score=GAP_EXTEND_PENALTY)
