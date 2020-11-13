@@ -4,13 +4,27 @@ from functools import reduce
 from Bio.Align import PairwiseAligner
 from Bio.Align import substitution_matrices
 import itertools
+import os
 
-GAP_PENALTY = -100
-GAP_EXTEND_PENALTY = -10
-END_GAP_PENALTY = -2
-END_GAP_EXTEND_PENALTY = -1
-MATCH_SCORE = 1
-MISMATCH_SCORE = -1
+with open(os.path.join('data', 'scores.tab')) as scores_file:
+    scores_dict = {}
+    for line in scores_file:
+        score_name, _, val = line.partition('\t')
+        try:
+            scores_dict[score_name] = int(val)
+        except ValueError as ex:
+            raise ValueError(
+                f"The value for '{score_name}' in data/scores.tab is not a number") from ex
+
+try:
+    GAP_PENALTY = scores_dict['gap penalty']
+    GAP_EXTEND_PENALTY = scores_dict['gap extend penalty']
+    END_GAP_PENALTY = scores_dict['end gap penalty']
+    END_GAP_EXTEND_PENALTY = scores_dict['end gap extend penalty']
+    MATCH_SCORE = scores_dict['match score']
+    MISMATCH_SCORE = scores_dict['mismatch score']
+except KeyError as ex:
+    raise ValueError(f"'{ex.args[0]}' is missing in data/scores.tab") from ex
 
 score_matrix = np.empty((16, 16))
 
