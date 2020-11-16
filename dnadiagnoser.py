@@ -93,6 +93,7 @@ class DnaProcessor():
     def __init__(self) -> None:
         self.infile: Optional[str] = None
         self.table: Optional[pd.DataFrame] = None
+        self.aligned = False
 
     def load_table(self, infile: str) -> None:
         table = pd.read_csv(infile, delimiter='\t').rename(
@@ -114,16 +115,18 @@ class DnaProcessor():
             raise ValueError('Input file is not given')
         if not outfile:
             raise ValueError('Output file is not given')
-        if self.infile != infile or self.table is None:
-            self.load_table(infile)
-            column = "species"
-            selection = []
+        self.load_table(infile)
+        column = "species"
+        selection = []
         assert(self.table is not None)
         reference_sequence = references[reference_name]
         alignment_displays = self.table['sequence'].apply(
-            lambda seq: seq.align(reference_sequence))
-        table = self.table.groupby(
-            column)['sequence'].agg(combine_sequences)
+            lambda seq: seq.align(reference_sequence)) if not self.aligned else self.table['sequence']
+        try:
+            table = self.table.groupby(
+                column)['sequence'].agg(combine_sequences)
+        except ValueError as ex:
+            raise ValueError("The sequences seem to not be aligned") from ex
         if selection:
             table = table.filter(items=selection).sort_index()
         with open(outfile, mode='w') as output:
@@ -218,6 +221,13 @@ def launch_gui() -> None:
 
     column_selector = ColumnSelector(root)
 
+    def set_aligned() -> None:
+        processor.aligned = not processor.aligned
+
+    aligned_var = tk.BooleanVar(value=False)
+    aligned_btn = ttk.Checkbutton(
+        root, variable=aligned_var, offvalue=False, onvalue=True, text="Already aligned", command=set_aligned)
+
     def load() -> None:
         try:
             if (infile := inputchooser.file_var.get()):
@@ -252,6 +262,8 @@ def launch_gui() -> None:
     process_btn.grid(row=2, column=1)
     load_btn.grid(row=2, column=0)
     column_selector.grid(row=3, column=0, sticky="nsew")
+
+    aligned_btn.grid(row=2, column=2)
 
     root.mainloop()
 

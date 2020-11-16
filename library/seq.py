@@ -125,8 +125,8 @@ class Seq:
     def __or__(self, other: 'Seq') -> 'Seq':
         return Seq(self.data | other.data, merge_insertions(self.insertions, other.insertions))
 
-    # def __str__(self) -> str:
-    #     return "".join(map(seq_write_tuple.__getitem__, self.data))
+    def __str__(self) -> str:
+        return "".join(map(seq_write_tuple.__getitem__, self.data))
 
     def __iter__(self) -> Iterator:
         return self.data.__iter__()
