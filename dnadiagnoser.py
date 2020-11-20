@@ -94,6 +94,7 @@ class DnaProcessor():
         self.infile: Optional[str] = None
         self.table: Optional[pd.DataFrame] = None
         self.aligned = False
+        self.relative_positions = False
 
     def load_table(self, infile: str) -> None:
         table = pd.read_csv(infile, delimiter='\t').rename(
@@ -221,12 +222,25 @@ def launch_gui() -> None:
 
     column_selector = ColumnSelector(root)
 
-    def set_aligned() -> None:
-        processor.aligned = not processor.aligned
-
+    options_frame = ttk.Frame(root)
     aligned_var = tk.BooleanVar(value=False)
+    relative_positions_var = tk.BooleanVar(value=False)
+
+    def set_relative_positions() -> None:
+        processor.relative_positions = relative_positions_var.get()
+    relative_positions_btn = ttk.Checkbutton(
+        options_frame, variable=relative_positions_var, offvalue=False, onvalue=True, text="Positions relative to the reference", command=set_relative_positions)
+    relative_positions_btn.state(['disabled'])
+
+    def set_aligned() -> None:
+        processor.aligned = aligned_var.get()
+        processor.relative_positions &= processor.aligned
+        relative_positions_btn.state([
+            '!disabled' if processor.aligned else 'disabled'])
     aligned_btn = ttk.Checkbutton(
-        root, variable=aligned_var, offvalue=False, onvalue=True, text="Already aligned", command=set_aligned)
+        options_frame, variable=aligned_var, offvalue=False, onvalue=True, text="Already aligned", command=set_aligned)
+    aligned_btn.grid(row=0, column=0, sticky='w')
+    relative_positions_btn.grid(row=1, column=0, sticky='w')
 
     def load() -> None:
         try:
@@ -263,7 +277,7 @@ def launch_gui() -> None:
     load_btn.grid(row=2, column=0)
     column_selector.grid(row=3, column=0, sticky="nsew")
 
-    aligned_btn.grid(row=2, column=2)
+    options_frame.grid(row=2, column=2)
 
     root.mainloop()
 
