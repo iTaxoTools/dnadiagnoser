@@ -1,4 +1,4 @@
-from typing import Union, Iterator, Tuple, Dict, List
+from typing import Union, Iterator, Tuple, Dict, List, Optional, cast
 import numpy as np
 from functools import reduce
 from Bio.Align import PairwiseAligner
@@ -153,6 +153,27 @@ class Seq:
                 self.insertions[prev_ref_end] = self.data[prev_self_end:]
         self.data = aligned_data
         return format(alignment)
+
+    def make_position_tranlator(self, ref: 'Seq') -> Tuple[str, ...]:
+        """
+        Returns a tuple, which at position i contains of a position of ref corresponding to the position i in self.
+        "n+i" represents insertion relative to ref
+        """
+        translator: List[Optional[Union[int, str]]] = [None] * len(self.data)
+        aligned = aligner.align(ref.data, self.data)[0].aligned
+        for ref_frag, self_frag in zip(*aligned):
+            translator[slice(*self_frag)] = range(*self_frag)
+        last_index_to = 0
+        shift_from_last = 1
+        for i, to in enumerate(translator):
+            if to is not None:
+                translator[i] = str(to)
+                last_index_to = i
+                shift_from_last = 1
+            else:
+                translator[i] = f"{last_index_to}+{shift_from_last}"
+                shift_from_last += 1
+        return cast(Tuple[str, ...], tuple(translator))
 
 
 def differences(seq1: Seq, seq2: Seq) -> Tuple[List[Tuple[int, int, int]], Dict[int, np.array], Dict[int, np.array]]:
