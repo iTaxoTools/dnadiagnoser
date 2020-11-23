@@ -7,7 +7,7 @@ import sys
 import tkinter.messagebox
 import warnings
 from functools import reduce
-from typing import Dict, List, Optional, TextIO, Tuple
+from typing import Dict, List, Optional, TextIO, Tuple, Callable
 
 import numpy as np
 import pandas as pd
@@ -42,48 +42,48 @@ def and_join(words: List[str]) -> str:
         return ", ".join(words[:-1]) + " and " + words[-1]
 
 
-def show_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array]) -> str:
+def show_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array], translation: Callable[[int], str] = str) -> str:
     replacements = ", ".join(
-        f"{i} ({seq_write_tuple[nuc1]} vs. {seq_write_tuple[nuc2]})" for i, nuc1, nuc2 in repl)
+        f"{translation(i)} ({seq_write_tuple[nuc1]} vs. {seq_write_tuple[nuc2]})" for i, nuc1, nuc2 in repl)
     insertions1 = ", ".join(
-        f"at {i} {''.join(seq_write_tuple[nuc] for nuc in frag)}" for i, frag in ins1.items())
+        f"at {translation(i)} {''.join(seq_write_tuple[nuc] for nuc in frag)}" for i, frag in ins1.items())
     insertions2 = ", ".join(
-        f"at {i} {''.join(seq_write_tuple[nuc] for nuc in frag)}" for i, frag in ins2.items())
+        f"at {translation(i)} {''.join(seq_write_tuple[nuc] for nuc in frag)}" for i, frag in ins2.items())
     return "\t".join((replacements, insertions1, insertions2))
 
 
-def textual_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array]) -> str:
+def textual_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array], translation: Callable[[int], str] = str) -> str:
     repls_as_str = [(i, f"({seq_write_tuple[nuc1]} vs. {seq_write_tuple[nuc2]})")
                     for i, nuc1, nuc2 in repl]
     ins_as_str = [
         (i, f"(insertion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
     del_as_str = [
         (i, f"(deletion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
-    listed_difference = [f"{i} {desc}" for i, desc in sorted(
+    listed_difference = [f"{translation(i)} {desc}" for i, desc in sorted(
         repls_as_str + ins_as_str + del_as_str, key=lambda x: x[0])]
     return and_join(listed_difference)
 
 
-def show_diag_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array]) -> str:
+def show_diag_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array], translation: Callable[[int], str] = str) -> str:
     repls_as_str = [(i, f"({seq_write_tuple[nuc1]})")
                     for i, nuc1, nuc2 in repl]
     ins_as_str = [
         (i, f"(insertion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
     del_as_str = [
         (i, f"(deletion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
-    listed_difference = [f"{i} {desc}" for i, desc in sorted(
+    listed_difference = [f"{translation(i)} {desc}" for i, desc in sorted(
         repls_as_str + ins_as_str + del_as_str, key=lambda x: x[0])]
     return ", ".join(listed_difference)
 
 
-def diag_textual_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array]) -> str:
+def diag_textual_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array], translation: Callable[[int], str] = str) -> str:
     repls_as_str = [(i, f"having a {seq_write_tuple[nuc1]}")
                     for i, nuc1, nuc2 in repl]
     ins_as_str = [
         (i, f"having an insertion {''.join(seq_write_tuple[nuc] for nuc in frag)}") for i, frag in ins1.items()]
     del_as_str = [
         (i, f"having a deletion {''.join(seq_write_tuple[nuc] for nuc in frag)}") for i, frag in ins1.items()]
-    listed_difference = [f"{desc} at position {i}" for i, desc in sorted(
+    listed_difference = [f"{desc} at position {translation(i)}" for i, desc in sorted(
         repls_as_str + ins_as_str + del_as_str, key=lambda x: x[0])]
     return and_join(listed_difference)
 
@@ -128,6 +128,8 @@ class DnaProcessor():
                 column)['sequence'].agg(combine_sequences)
         except ValueError as ex:
             raise ValueError("The sequences seem to not be aligned") from ex
+        position_translator = table.iat[0].make_position_tranlator(
+            reference_sequence)
         if selection:
             table = table.filter(items=selection).sort_index()
         with open(outfile, mode='w') as output:
@@ -137,9 +139,13 @@ class DnaProcessor():
                     print(specimen, file=output)
                     print(alignment_str, file=output)
             output.write("\n")
-            self.report(output, table, column, reference_name)
+            if self.relative_positions:
+                self.report(output, table, column, reference_name,
+                            lambda i: position_translator[i])
+            else:
+                self.report(output, table, column, reference_name)
 
-    def report(self, output: TextIO, table: pd.Series, column: str, reference_name: str) -> None:
+    def report(self, output: TextIO, table: pd.Series, column: str, reference_name: str, translation: Callable[[int], str] = str) -> None:
         matrixOutput = io.StringIO("")
         tableOutput = io.StringIO("")
         textOutput = io.StringIO("")
@@ -162,11 +168,11 @@ class DnaProcessor():
                     matrixOutput.write(f"\t{difference_num}")
                 if species1 != species2:
                     print(species1, species2, show_differences(
-                        repl, ins1, ins2), sep='\t', file=tableOutput)
+                        repl, ins1, ins2, translation), sep='\t', file=tableOutput)
                 if difference_num > 0:
                     textFragments.append(
                         f"from {species2} in nucleotide {'position' if difference_num == 1 else 'positions'} " +
-                        textual_differences(repl, ins1, ins2))
+                        textual_differences(repl, ins1, ins2, translation))
             textOutput.write(
                 and_join(textFragments))
             textOutput.write("\n\n")
@@ -182,11 +188,11 @@ class DnaProcessor():
             other_species_seq: Seq = combine_sequences(table.drop(
                 labels=species1))
             repl, ins1, ins2 = differences(table[species1], other_species_seq)
-            if (text := show_diag_differences(repl, ins1, ins2)):
+            if (text := show_diag_differences(repl, ins1, ins2, translation)):
                 print(species1, text, sep='\t', file=diag_tableOutput)
             else:
                 print(species1, "None", sep='\t', file=diag_tableOutput)
-            if (text := diag_textual_differences(repl, ins1, ins2)):
+            if (text := diag_textual_differences(repl, ins1, ins2, translation)):
                 diag_textOutput.write(
                     f"{species1} differs from all other {column} in the dataset by ")
                 diag_textOutput.write(text)
