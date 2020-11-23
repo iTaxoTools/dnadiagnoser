@@ -229,7 +229,7 @@ def launch_gui() -> None:
     def set_relative_positions() -> None:
         processor.relative_positions = relative_positions_var.get()
     relative_positions_btn = ttk.Checkbutton(
-        options_frame, variable=relative_positions_var, offvalue=False, onvalue=True, text="Positions relative to the reference", command=set_relative_positions)
+        options_frame, variable=relative_positions_var, offvalue=False, onvalue=True, text="Print positions relative to the reference sequence", command=set_relative_positions)
     relative_positions_btn.state(['disabled'])
 
     def set_aligned() -> None:
