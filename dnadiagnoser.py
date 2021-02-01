@@ -97,8 +97,9 @@ class DnaProcessor():
         self.relative_positions = False
 
     def load_table(self, infile: str) -> None:
-        table = pd.read_csv(infile, delimiter='\t').rename(
-            columns=str.casefold).rename(columns=typos)
+        with open(infile, errors='replace') as file:
+            table = pd.read_csv(file, delimiter='\t').rename(
+                columns=str.casefold).rename(columns=typos)
         if 'sequence' not in table.columns:
             raise ValueError("'sequences' or 'sequence' column is missing")
         if 'specimenid' not in table.columns:
