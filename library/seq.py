@@ -2,7 +2,6 @@ from typing import Union, Iterator, Tuple, Dict, List, Optional, cast
 import numpy as np
 from functools import reduce
 from Bio.Align import PairwiseAligner
-from Bio.Align import substitution_matrices
 import itertools
 import os
 
@@ -107,13 +106,13 @@ class Seq:
     """
 
     def __init__(self, data: np.array, insertions: Dict[int, np.array]) -> None:
-        self.data = data
+        self.data: np.array = data
         self.insertions = insertions
 
     @classmethod
     def from_str(cls, sequence: str) -> 'Seq':
         sequence = sequence.strip("-Nn?\n\t ").upper()
-        seq = cls(np.empty(len(sequence), dtype="int32"), {})
+        seq: Seq = cls(np.empty(len(sequence), dtype="int32"), {})
         for i, el in enumerate(map(seq_read_dict.get, sequence)):
             try:
                 seq.data[i] = el
@@ -147,7 +146,7 @@ class Seq:
             if self_start > prev_self_end:
                 self.insertions[prev_ref_end] = self.data[prev_self_end: self_start]
             prev_self_end = self_end
-            preve_ref_end = ref_end
+            prev_ref_end = ref_end
         else:
             if prev_self_end < len(self.data):
                 self.insertions[prev_ref_end] = self.data[prev_self_end:]
@@ -161,7 +160,7 @@ class Seq:
         """
         translator: List[Optional[Union[int, str]]] = [None] * len(self.data)
         aligned = aligner.align(ref.data, self.data)[0].aligned
-        for ref_frag, self_frag in zip(*aligned):
+        for _, self_frag in zip(*aligned):
             translator[slice(*self_frag)] = range(*self_frag)
         last_index_to = 0
         shift_from_last = 1

@@ -1,8 +1,8 @@
 import os.path
 import tkinter as tk
-import tkinter.filedialog
+import tkinter.filedialog as tkfiledialog
 import tkinter.ttk as ttk
-from typing import Literal, Any, Dict, Tuple, List, Optional
+from typing import Any, Dict, Tuple, List, Optional
 
 
 class FileChooser():
@@ -10,19 +10,20 @@ class FileChooser():
     Creates a frame with a label, entry and browse button for choosing files
     """
 
-    def __init__(self, parent: Any, *, label: str, mode: Literal["open", "save"]):
+    def __init__(self, parent: Any, *, label: str, mode: str):
         self.frame = ttk.Frame(parent)
         self.frame.columnconfigure([0, 1], weight=1)
         self.label = ttk.Label(self.frame, text=label)
         self.file_var = tk.StringVar()
         self.entry = ttk.Entry(self.frame, textvariable=self.file_var)
         if mode == "open":
-            self._dialog = tk.filedialog.askopenfilename
+            self._dialog = tkfiledialog.askopenfilename
         elif mode == "save":
-            self._dialog = tk.filedialog.asksaveasfilename
+            self._dialog = tkfiledialog.asksaveasfilename
 
         def browse() -> None:
-            if (newpath := self._dialog()):
+            newpath: Optional[str] = self._dialog()
+            if newpath:
                 try:
                     newpath = os.path.relpath(newpath)
                 except:
@@ -79,10 +80,10 @@ class Listbox():
     Wrapper for a read-only tk.Listbox with a method that returns the selection
     """
 
-    def __init__(self, parent: tk.Misc, *, height: int, selectmode: Literal["browse", "extended"], values: List[str]) -> None:
+    def __init__(self, parent: tk.Misc, *, height: int, selectmode: str, values: List[str]) -> None:
         self.list = values
         self.listbox = tk.Listbox(
-            parent, height=height, selectmode=selectmode, listvariable=tk.StringVar(value=values))
+            parent, height=height, selectmode=selectmode, listvariable=tk.StringVar(value=" ".join(values)))
         self.grid = self.listbox.grid
 
     def selection(self) -> List[str]:
