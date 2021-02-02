@@ -30,7 +30,7 @@ typos = dict(
 
 
 def combine_sequences(series: pd.Series) -> Seq:
-    return reduce(lambda s1, s2: s1 | s2, series)
+    return reduce(Seq.__or__, series)
 
 
 def and_join(words: List[str]) -> str:
@@ -58,7 +58,7 @@ def textual_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.arr
     ins_as_str = [
         (i, f"(insertion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
     del_as_str = [
-        (i, f"(deletion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
+        (i, f"(deletion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins2.items()]
     listed_difference = [f"{translation(i)} {desc}" for i, desc in sorted(
         repls_as_str + ins_as_str + del_as_str, key=lambda x: x[0])]
     return and_join(listed_difference)
@@ -70,7 +70,7 @@ def show_diag_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.a
     ins_as_str = [
         (i, f"(insertion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
     del_as_str = [
-        (i, f"(deletion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins1.items()]
+        (i, f"(deletion {''.join(seq_write_tuple[nuc] for nuc in frag)})") for i, frag in ins2.items()]
     listed_difference = [f"{translation(i)} {desc}" for i, desc in sorted(
         repls_as_str + ins_as_str + del_as_str, key=lambda x: x[0])]
     return ", ".join(listed_difference)
@@ -78,11 +78,11 @@ def show_diag_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.a
 
 def diag_textual_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, np.array], ins2: Dict[int, np.array], translation: Callable[[int], str] = str) -> str:
     repls_as_str = [(i, f"having a {seq_write_tuple[nuc1]}")
-                    for i, nuc1, nuc2 in repl]
+                    for i, nuc1, _ in repl]
     ins_as_str = [
         (i, f"having an insertion {''.join(seq_write_tuple[nuc] for nuc in frag)}") for i, frag in ins1.items()]
     del_as_str = [
-        (i, f"having a deletion {''.join(seq_write_tuple[nuc] for nuc in frag)}") for i, frag in ins1.items()]
+        (i, f"having a deletion {''.join(seq_write_tuple[nuc] for nuc in frag)}") for i, frag in ins2.items()]
     listed_difference = [f"{desc} at position {translation(i)}" for i, desc in sorted(
         repls_as_str + ins_as_str + del_as_str, key=lambda x: x[0])]
     return and_join(listed_difference)
@@ -97,8 +97,9 @@ class DnaProcessor():
         self.relative_positions = False
 
     def load_table(self, infile: str) -> None:
-        table = pd.read_csv(infile, delimiter='\t').rename(
-            columns=str.casefold).rename(columns=typos)
+        with open(infile, errors='replace') as file:
+            table = pd.read_csv(file, delimiter='\t').rename(
+                columns=str.casefold).rename(columns=typos)
         if 'sequence' not in table.columns:
             raise ValueError("'sequences' or 'sequence' column is missing")
         if 'specimenid' not in table.columns:
@@ -188,11 +189,13 @@ class DnaProcessor():
             other_species_seq: Seq = combine_sequences(table.drop(
                 labels=species1))
             repl, ins1, ins2 = differences(table[species1], other_species_seq)
-            if (text := show_diag_differences(repl, ins1, ins2, translation)):
+            text = show_diag_differences(repl, ins1, ins2, translation)
+            if text:
                 print(species1, text, sep='\t', file=diag_tableOutput)
             else:
                 print(species1, "None", sep='\t', file=diag_tableOutput)
-            if (text := diag_textual_differences(repl, ins1, ins2, translation)):
+            text = diag_textual_differences(repl, ins1, ins2, translation)
+            if text:
                 diag_textOutput.write(
                     f"{species1} differs from all other {column} in the dataset by ")
                 diag_textOutput.write(text)
@@ -250,7 +253,8 @@ def launch_gui() -> None:
 
     def load() -> None:
         try:
-            if (infile := inputchooser.file_var.get()):
+            infile: Optional[str] = inputchooser.file_var.get()
+            if infile:
                 processor.load_table(infile)
                 column_selector.set_columns(processor.choices())
         except Exception as ex:
@@ -259,7 +263,8 @@ def launch_gui() -> None:
     def process() -> None:
         try:
             with warnings.catch_warnings(record=True) as warns:
-                if (selection := column_selector.selection()):
+                selection = column_selector.selection()
+                if selection:
                     column, selected = selection
                 else:
                     column, selected = ('species', [])
