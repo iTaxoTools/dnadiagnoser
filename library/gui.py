@@ -4,7 +4,7 @@ import io
 import shutil
 import logging
 import warnings
-from typing import Any, Callable, Iterator
+from typing import Any, Callable, Iterator, Optional
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -12,7 +12,7 @@ import tkinter.font as tkfont
 import tkinter.messagebox as tkmessagebox
 import tkinter.filedialog as tkfiledialog
 
-from library.dnaprocessor import references
+from library.dnaprocessor import references, DnaProcessor
 from library.gui_utils import ColumnSelector
 
 
@@ -30,10 +30,15 @@ class DNADiagnoserGUI(ttk.Frame):
             file=os.path.join(sys.path[0], "data/file-log.png"))
         self.preview_dir = preview_dir
 
+        self.dnaprocessor = DnaProcessor()
+
         self.create_top_frame()
         self.create_parameters_frame()
         self.create_filelist_frame()
         self.create_preview_frame()
+
+        self.aligned.trace_add('write', self.update_dna_processor)
+        self.relative_positions.trace_add('write', self.update_dna_processor)
 
         ttk.Separator(self, orient="horizontal").grid(
             row=1, column=0, columnspan=3, sticky="we")
@@ -45,6 +50,10 @@ class DNADiagnoserGUI(ttk.Frame):
         self.rowconfigure(3, weight=1)
         self.columnconfigure(2, weight=1)
         self.grid(row=0, column=0, sticky="nsew")
+
+    def update_dna_processor(self, name1: str, name2: str, op: str) -> None:
+        self.dnaprocessor.aligned = self.aligned.get()
+        self.dnaprocessor.relative_positions = self.relative_positions.get()
 
     def create_top_frame(self) -> None:
         top_frame = ttk.Frame(self, relief="sunken", padding=4)
@@ -99,6 +108,32 @@ class DNADiagnoserGUI(ttk.Frame):
         self.filelist.delete(*self.filelist.get_children())
         self.preview.delete("1.0", "end")
         self.preview_frame.configure(text="Preview")
+        output_file = os.path.join(self.preview_dir, "output.txt")
+
+        try:
+            with warnings.catch_warnings(record=True) as warns:
+                selection = self.column_selector.selection()
+                if selection:
+                    column, selected = selection
+                else:
+                    column, selected = ('species', [])
+                self.dnaprocessor.process_files(self.input_file.get(),
+                                                output_file, self.reference_seq.get(), column, selected)
+                for w in warns:
+                    tkmessagebox.showwarning("Warning", str(w.message))
+        except Exception as ex:
+            tkmessagebox.showerror("Error", str(ex))
+        else:
+            tkmessagebox.showinfo("Done", "Analysis is complete")
+
+    def load_file(self):
+        try:
+            infile: Optional[str] = self.input_file.get()
+            if infile:
+                self.dnaprocessor.load_table(infile)
+                self.column_selector.set_columns(self.dnaprocessor.choices())
+        except Exception as ex:
+            tkmessagebox.showerror("Error", str(ex))
 
     def outfilenames(self, which: str) -> Iterator[str]:
         if which == "all":
@@ -159,6 +194,7 @@ class DNADiagnoserGUI(ttk.Frame):
         def activate_selector() -> None:
             if activate_var.get():
                 self.column_selector.notebook.state(['!disabled'])
+                self.load_file()
             else:
                 self.column_selector.notebook.state(['disabled'])
 
