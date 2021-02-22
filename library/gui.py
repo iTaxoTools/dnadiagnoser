@@ -61,7 +61,7 @@ class DNADiagnoserGUI(ttk.Frame):
         top_frame.rowconfigure(0, weight=1)
         top_frame.grid(row=0, column=0, columnspan=3, sticky="nsew")
 
-        ttk.Label(top_frame, text="Morphometricanalyzer",
+        ttk.Label(top_frame, text="DNAdiagnoser",
                   font=tkfont.Font(size=20)).grid(row=0, column=0)
         ttk.Separator(top_frame, orient="vertical").grid(
             row=0, column=1, sticky="nsew")
@@ -125,6 +125,7 @@ class DNADiagnoserGUI(ttk.Frame):
             tkmessagebox.showerror("Error", str(ex))
         else:
             tkmessagebox.showinfo("Done", "Analysis is complete")
+            self.fill_file_list()
 
     def load_file(self):
         try:
@@ -189,7 +190,7 @@ class DNADiagnoserGUI(ttk.Frame):
         self.column_selector = ColumnSelector(selector_frame)
         self.column_selector.notebook.state(['disabled'])
         self.column_selector.set_columns(
-            {'foo': ['bar', 'baz'], 'qwe': ['fg', 'gg']})
+            {'': []})
 
         def activate_selector() -> None:
             if activate_var.get():
