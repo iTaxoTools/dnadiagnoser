@@ -12,6 +12,9 @@ import tkinter.font as tkfont
 import tkinter.messagebox as tkmessagebox
 import tkinter.filedialog as tkfiledialog
 
+from library.dnaprocessor import references
+from library.gui_utils import ColumnSelector
+
 
 class DNADiagnoserGUI(ttk.Frame):
 
@@ -110,8 +113,59 @@ class DNADiagnoserGUI(ttk.Frame):
     def create_parameters_frame(self) -> None:
         parameters_frame = ttk.LabelFrame(self, text="Parameters")
         parameters_frame.grid(row=3, column=0, sticky="nsew")
-        parameters_frame.rowconfigure(5, weight=1)
+        parameters_frame.rowconfigure(4, weight=1)
         parameters_frame.columnconfigure(0, weight=1)
+
+        ttk.Label(parameters_frame, text="Reference sequence").grid(
+            row=0, column=0, sticky="w")
+
+        self.reference_seq = tk.StringVar()
+        reference_cmb = ttk.Combobox(parameters_frame, textvariable=self.reference_seq, values=tuple(
+            references.keys()), state='readonly')
+        reference_cmb.current(0)
+        reference_cmb.grid(row=1, column=0, sticky='w')
+
+        self.aligned = tk.BooleanVar(self, value=False)
+        self.relative_positions = tk.BooleanVar(value=False)
+
+        ttk.Checkbutton(parameters_frame, variable=self.aligned,
+                        text="Already aligned").grid(row=2, column=0, sticky='w')
+
+        relative_positions_btn = ttk.Checkbutton(
+            parameters_frame, variable=self.relative_positions, text="Print positions relative to the reference sequence", state="disabled")
+        relative_positions_btn.grid(row=3, column=0, sticky='w')
+
+        def toggle_relative_positions_state(name1: str, name2: str, op: str) -> None:
+            if self.aligned.get():
+                relative_positions_btn.configure(state='normal')
+            else:
+                relative_positions_btn.configure(state='disabled')
+
+        self.aligned.trace_add('write', toggle_relative_positions_state)
+
+        self.make_column_selector(parameters_frame)
+
+    def make_column_selector(self, frame: ttk.LabelFrame) -> None:
+        selector_frame = ttk.Frame(frame, padding=3)
+        selector_frame.rowconfigure(1, weight=1)
+        selector_frame.columnconfigure(0, weight=1)
+        selector_frame.grid(row=4, column=0, sticky='nsew')
+
+        self.column_selector = ColumnSelector(selector_frame)
+        self.column_selector.notebook.state(['disabled'])
+        self.column_selector.set_columns(
+            {'foo': ['bar', 'baz'], 'qwe': ['fg', 'gg']})
+
+        def activate_selector() -> None:
+            if activate_var.get():
+                self.column_selector.notebook.state(['!disabled'])
+            else:
+                self.column_selector.notebook.state(['disabled'])
+
+        activate_var = tk.BooleanVar(self, value=False)
+        ttk.Checkbutton(selector_frame, variable=activate_var,
+                        text="Select categories", command=activate_selector).grid(row=0, column=0, sticky='w')
+        self.column_selector.grid(row=1, column=0, sticky='nsew')
 
     def create_filelist_frame(self) -> None:
         filelist_frame = ttk.Labelframe(self, text="Files")
