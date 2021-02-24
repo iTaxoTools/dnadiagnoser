@@ -85,11 +85,16 @@ def diag_textual_differences(repl: List[Tuple[int, int, int]], ins1: Dict[int, n
 
 class DnaProcessor():
 
-    def __init__(self) -> None:
+    def __init__(self, output_dir: str) -> None:
         self.infile: Optional[str] = None
         self.table: Optional[pd.DataFrame] = None
         self.aligned = False
         self.relative_positions = False
+        self.output_dir = output_dir
+
+    def output(self, name) -> TextIO:
+        filename = os.path.join(self.output_dir, name + ".txt")
+        return open(filename, mode="w")
 
     def load_table(self, infile: str) -> None:
         with open(infile, errors='replace') as file:
@@ -107,11 +112,9 @@ class DnaProcessor():
         self.table = table
         self.infile = infile
 
-    def process_files(self, infile: str, outfile: str, reference_name: str, column: str, selection: List[str]) -> None:
+    def process_files(self, infile: str, reference_name: str, column: str, selection: List[str]) -> None:
         if not infile:
             raise ValueError('Input file is not given')
-        if not outfile:
-            raise ValueError('Output file is not given')
         self.load_table(infile)
         column = "species"
         selection = []
@@ -128,80 +131,74 @@ class DnaProcessor():
             reference_sequence)
         if selection:
             table = table.filter(items=selection).sort_index()
-        with open(outfile, mode='w') as output:
+        with self.output("Aligments") as output:
             print("Alignments:", file=output)
             for specimen, alignment_str in alignment_displays.items():
                 if not selection or self.table[column][specimen] in selection:
                     print(specimen, file=output)
                     print(alignment_str, file=output)
             output.write("\n")
-            if self.relative_positions:
-                self.report(output, table, column, reference_name,
-                            lambda i: position_translator[i])
-            else:
-                self.report(output, table, column, reference_name)
+        if self.relative_positions:
+            self.report(table, column, reference_name,
+                        lambda i: position_translator[i])
+        else:
+            self.report(table, column, reference_name)
 
-    @staticmethod
-    def report(output: TextIO, table: pd.Series, column: str, reference_name: str, translation: Callable[[int], str] = str) -> None:
-        matrixOutput = io.StringIO("")
-        tableOutput = io.StringIO("")
-        textOutput = io.StringIO("")
-        print("", *table.index, sep='\t', file=matrixOutput)
-        print(
-            f"{column} 1\t{column} 2\treplacements\tinsertions 1\tinsertions 2", file=tableOutput)
-        num_species = len(table.index)
-        for species1 in table.index:
-            matrixOutput.write(species1)
-            textOutput.write(
-                f"Using nucleotide positions in the {reference_name} sequence as a reference, {species1} differs ")
-            textFragments = []
-            for species2 in table.index:
-                repl, ins1, ins2 = differences(
-                    table[species1], table[species2])
-                insertions_num = sum(
-                    map(len, ins1.values())) + sum(map(len, ins2.values()))
-                difference_num = len(repl) + insertions_num
-                if species1 >= species2:
-                    matrixOutput.write(f"\t{difference_num}")
-                if species1 != species2:
-                    print(species1, species2, show_differences(
-                        repl, ins1, ins2, translation), sep='\t', file=tableOutput)
-                if difference_num > 0:
-                    textFragments.append(
-                        f"from {species2} in nucleotide {'position' if difference_num == 1 else 'positions'} " +
-                        textual_differences(repl, ins1, ins2, translation))
-            textOutput.write(
-                and_join(textFragments))
-            textOutput.write("\n\n")
-            matrixOutput.write("\n")
-        print(matrixOutput.getvalue(), file=output)
-        print(tableOutput.getvalue(), file=output)
-        print(textOutput.getvalue(), file=output)
+    def report(self, table: pd.Series, column: str, reference_name: str, translation: Callable[[int], str] = str) -> None:
+        with self.output("Difference_matrix") as matrixOutput, self.output("Difference_table") as tableOutput, self.output("Differences_description") as textOutput:
+            print("", *table.index, sep='\t', file=matrixOutput)
+            print(
+                f"{column} 1\t{column} 2\treplacements\tinsertions 1\tinsertions 2", file=tableOutput)
+            for species1 in table.index:
+                matrixOutput.write(species1)
+                textOutput.write(
+                    f"Using nucleotide positions in the {reference_name} sequence as a reference, {species1} differs ")
+                textFragments = []
+                for species2 in table.index:
+                    repl, ins1, ins2 = differences(
+                        table[species1], table[species2])
+                    insertions_num = sum(
+                        map(len, ins1.values())) + sum(map(len, ins2.values()))
+                    difference_num = len(repl) + insertions_num
+                    if species1 >= species2:
+                        matrixOutput.write(f"\t{difference_num}")
+                    if species1 != species2:
+                        print(species1, species2, show_differences(
+                            repl, ins1, ins2, translation), sep='\t', file=tableOutput)
+                    if difference_num > 0:
+                        textFragments.append(
+                            f"from {species2} in nucleotide {'position' if difference_num == 1 else 'positions'} " +
+                            textual_differences(repl, ins1, ins2, translation))
+                textOutput.write(
+                    and_join(textFragments))
+                textOutput.write("\n\n")
+                matrixOutput.write("\n")
 
         diag_tableOutput = io.StringIO("")
         diag_textOutput = io.StringIO("")
-        print(f"{column}\tUnique diagnostic differences", file=diag_tableOutput)
-        for species1 in table.index:
-            other_species_seq: Seq = combine_sequences(table.drop(
-                labels=species1))
-            repl, ins1, ins2 = differences(table[species1], other_species_seq)
-            text = show_diag_differences(repl, ins1, ins2, translation)
-            if text:
-                print(species1, text, sep='\t', file=diag_tableOutput)
-            else:
-                print(species1, "None", sep='\t', file=diag_tableOutput)
-            text = diag_textual_differences(repl, ins1, ins2, translation)
-            if text:
-                diag_textOutput.write(
-                    f"{species1} differs from all other {column} in the dataset by ")
-                diag_textOutput.write(text)
-                diag_textOutput.write(
-                    f" of the {reference_name} reference sequence.\n")
-            else:
-                print(
-                    f"{species1} has no unique diagnostic differences in comparison to the other {column} in the data set.", file=diag_textOutput)
-        print(diag_tableOutput.getvalue(), file=output)
-        print(diag_textOutput.getvalue(), file=output)
+        with self.output("Diagnostic_table") as diag_tableOutput, self.output("Diagnostics_description") as diag_textOutput:
+            print(f"{column}\tUnique diagnostic differences",
+                  file=diag_tableOutput)
+            for species1 in table.index:
+                other_species_seq: Seq = combine_sequences(table.drop(
+                    labels=species1))
+                repl, ins1, ins2 = differences(
+                    table[species1], other_species_seq)
+                text = show_diag_differences(repl, ins1, ins2, translation)
+                if text:
+                    print(species1, text, sep='\t', file=diag_tableOutput)
+                else:
+                    print(species1, "None", sep='\t', file=diag_tableOutput)
+                text = diag_textual_differences(repl, ins1, ins2, translation)
+                if text:
+                    diag_textOutput.write(
+                        f"{species1} differs from all other {column} in the dataset by ")
+                    diag_textOutput.write(text)
+                    diag_textOutput.write(
+                        f" of the {reference_name} reference sequence.\n")
+                else:
+                    print(
+                        f"{species1} has no unique diagnostic differences in comparison to the other {column} in the data set.", file=diag_textOutput)
 
     def choices(self) -> Dict[str, List[str]]:
         """
