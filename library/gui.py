@@ -1,8 +1,6 @@
 import os
 import sys
-import io
 import shutil
-import logging
 import warnings
 from typing import Any, Callable, Iterator, Optional
 
@@ -30,7 +28,7 @@ class DNADiagnoserGUI(ttk.Frame):
             file=os.path.join(sys.path[0], "data/file-log.png"))
         self.preview_dir = preview_dir
 
-        self.dnaprocessor = DnaProcessor()
+        self.dnaprocessor = DnaProcessor(self.preview_dir)
 
         self.create_top_frame()
         self.create_parameters_frame()
@@ -52,6 +50,7 @@ class DNADiagnoserGUI(ttk.Frame):
         self.grid(row=0, column=0, sticky="nsew")
 
     def update_dna_processor(self, name1: str, name2: str, op: str) -> None:
+        del name1, name2, op  # Unneeded arguments
         self.dnaprocessor.aligned = self.aligned.get()
         self.dnaprocessor.relative_positions = self.relative_positions.get()
 
@@ -108,7 +107,6 @@ class DNADiagnoserGUI(ttk.Frame):
         self.filelist.delete(*self.filelist.get_children())
         self.preview.delete("1.0", "end")
         self.preview_frame.configure(text="Preview")
-        output_file = os.path.join(self.preview_dir, "output.txt")
 
         try:
             with warnings.catch_warnings(record=True) as warns:
@@ -118,11 +116,12 @@ class DNADiagnoserGUI(ttk.Frame):
                 else:
                     column, selected = ('species', [])
                 self.dnaprocessor.process_files(self.input_file.get(),
-                                                output_file, self.reference_seq.get(), column, selected)
+                                                self.reference_seq.get(), column, selected)
                 for w in warns:
                     tkmessagebox.showwarning("Warning", str(w.message))
         except Exception as ex:
             tkmessagebox.showerror("Error", str(ex))
+            raise
         else:
             tkmessagebox.showinfo("Done", "Analysis is complete")
             self.fill_file_list()
@@ -172,6 +171,7 @@ class DNADiagnoserGUI(ttk.Frame):
         relative_positions_btn.grid(row=3, column=0, sticky='w')
 
         def toggle_relative_positions_state(name1: str, name2: str, op: str) -> None:
+            del name1, name2, op  # Unneeded arguments
             if self.aligned.get():
                 relative_positions_btn.configure(state='normal')
             else:
@@ -188,9 +188,9 @@ class DNADiagnoserGUI(ttk.Frame):
         selector_frame.grid(row=4, column=0, sticky='nsew')
 
         self.column_selector = ColumnSelector(selector_frame)
-        self.column_selector.notebook.state(['disabled'])
         self.column_selector.set_columns(
-            {'': []})
+            {'species': []})
+        self.column_selector.notebook.state(['disabled'])
 
         def activate_selector() -> None:
             if activate_var.get():
