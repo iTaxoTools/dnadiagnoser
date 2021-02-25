@@ -19,7 +19,7 @@ def launch_gui() -> None:
     root.title("DNAdiagnoser")
     if os.name == "nt":
         root.wm_iconbitmap(os.path.join(
-            sys.path[0], 'morphometricanalyzer.ico'))
+            sys.path[0], 'data', 'dnadiagnoser.ico'))
 
     root.protocol("WM_DELETE_WINDOW", close_window)
     root.rowconfigure(0, weight=1)
@@ -35,13 +35,13 @@ def launch_gui() -> None:
 def main() -> None:
     if len(sys.argv) >= 3:
         input = sys.argv[1]
-        output = sys.argv[2]
         try:
             reference_name = sys.argv[3]
         except IndexError:
             reference_name = "Homo_sapiens_COI"
-        processor = DnaProcessor()
-        processor.process_files(input, output, reference_name, "species", [])
+        output_dir = tempfile.mkdtemp()
+        processor = DnaProcessor(output_dir)
+        processor.process_files(input, reference_name, "species", [])
     else:
         launch_gui()
 
