@@ -115,9 +115,10 @@ class DnaProcessor():
     def process_files(self, infile: str, reference_name: str, column: str, selection: List[str]) -> None:
         if not infile:
             raise ValueError('Input file is not given')
-        self.load_table(infile)
-        column = "species"
-        selection = []
+        if self.infile != infile:
+            self.load_table(infile)
+            column = "species"
+            selection = []
         assert(self.table is not None)
         reference_sequence = references[reference_name]
         alignment_displays = self.table['sequence'].apply(
