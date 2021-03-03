@@ -120,6 +120,9 @@ class DnaProcessor():
             column = "species"
             selection = []
         assert(self.table is not None)
+        if len(selection) == 1:
+            raise ValueError(
+                "Please select at least two categories for comparison")
         reference_sequence = references[reference_name]
         alignment_displays = self.table['sequence'].apply(
             lambda seq: seq.align(reference_sequence)) if not self.aligned else self.table['sequence']
