@@ -37,6 +37,7 @@ class DNADiagnoserGUI(ttk.Frame):
         self.create_filelist_frame()
         self.create_preview_frame()
 
+        self.insertions.trace_add('write', self.update_dna_processor)
         self.aligned.trace_add('write', self.update_dna_processor)
         self.relative_positions.trace_add('write', self.update_dna_processor)
 
@@ -55,6 +56,7 @@ class DNADiagnoserGUI(ttk.Frame):
         del name1, name2, op  # Unneeded arguments
         self.dnaprocessor.aligned = self.aligned.get()
         self.dnaprocessor.relative_positions = self.relative_positions.get()
+        self.dnaprocessor.insertions = self.insertions.get()
 
     def create_top_frame(self) -> None:
         top_frame = ttk.Frame(self, relief="sunken", padding=4)
@@ -166,15 +168,19 @@ class DNADiagnoserGUI(ttk.Frame):
         reference_cmb.current(0)
         reference_cmb.grid(row=1, column=0, sticky='w')
 
+        self.insertions = tk.BooleanVar(self, value=False)
+        ttk.Checkbutton(parameters_frame, variable=self.insertions,
+                        text="Use insertions/deletions as diagnostic sites").grid(row=2, column=0, sticky='w')
+
         self.aligned = tk.BooleanVar(self, value=False)
         self.relative_positions = tk.BooleanVar(value=False)
 
         ttk.Checkbutton(parameters_frame, variable=self.aligned,
-                        text="Already aligned").grid(row=2, column=0, sticky='w')
+                        text="Already aligned").grid(row=3, column=0, sticky='w')
 
         relative_positions_btn = ttk.Checkbutton(
             parameters_frame, variable=self.relative_positions, text="Print positions relative to the reference sequence", state="disabled")
-        relative_positions_btn.grid(row=3, column=0, sticky='w')
+        relative_positions_btn.grid(row=4, column=0, sticky='w')
 
         def toggle_relative_positions_state(name1: str, name2: str, op: str) -> None:
             del name1, name2, op  # Unneeded arguments

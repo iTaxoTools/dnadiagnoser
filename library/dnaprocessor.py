@@ -89,6 +89,7 @@ class DnaProcessor():
         self.infile: Optional[str] = None
         self.table: Optional[pd.DataFrame] = None
         self.aligned = False
+        self.insertions = False
         self.relative_positions = False
         self.output_dir = output_dir
 
@@ -126,6 +127,8 @@ class DnaProcessor():
         reference_sequence = references[reference_name]
         alignment_displays = self.table['sequence'].apply(
             lambda seq: seq.align(reference_sequence)) if not self.aligned else self.table['sequence']
+        if not self.insertions:
+            self.table['sequence'].apply(Seq.reset_insertions)
         try:
             table = self.table.groupby(
                 column)['sequence'].agg(combine_sequences)

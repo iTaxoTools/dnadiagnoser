@@ -183,6 +183,9 @@ class Seq:
                 shift_from_last += 1
         return cast(Tuple[str, ...], tuple(translator))
 
+    def reset_insertions(self) -> None:
+        self.insertions = {}
+
 
 def differences(seq1: Seq, seq2: Seq) -> Tuple[List[Tuple[int, int, int]], Dict[int, np.array], Dict[int, np.array]]:
     """
