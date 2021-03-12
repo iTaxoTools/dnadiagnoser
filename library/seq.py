@@ -108,6 +108,9 @@ class Seq:
     def __init__(self, data: np.array, insertions: Dict[int, np.array]) -> None:
         self.data: np.array = data
         self.insertions = insertions
+        # actual data is self.data[self.start:self.end]
+        self.start = 0
+        self.end = len(self.data)
 
     @classmethod
     def from_str(cls, sequence: str) -> 'Seq':
@@ -122,7 +125,11 @@ class Seq:
         return seq
 
     def __or__(self, other: 'Seq') -> 'Seq':
-        return Seq(self.data | other.data, merge_insertions(self.insertions, other.insertions))
+        result = Seq(self.data | other.data, merge_insertions(
+            self.insertions, other.insertions))
+        result.start = min(self.start, other.start)
+        result.end = max(self.end, other.end)
+        return result
 
     def __str__(self) -> str:
         return "".join(map(seq_write_tuple.__getitem__, self.data))
@@ -150,6 +157,8 @@ class Seq:
         else:
             if prev_self_end < len(self.data):
                 self.insertions[prev_ref_end] = self.data[prev_self_end:]
+        self.start, _ = aligned[0][0]
+        _, self.end = aligned[0][-1]
         self.data = aligned_data
         return format(alignment)
 
@@ -181,8 +190,15 @@ def differences(seq1: Seq, seq2: Seq) -> Tuple[List[Tuple[int, int, int]], Dict[
 
     Additionally returns a pair of dictionaries for different insertions for each sequence
     """
-    replacements = [(i, nuc1, nuc2) for i, (nuc1, nuc2) in enumerate(
-        zip(seq1, seq2)) if not nuc1 & nuc2 and (nuc1 or nuc2)]
+    # only compare common segments
+    diff_start = max(seq1.start, seq2.start)
+    diff_end = min(seq1.end, seq2.end)
+    seq1_segment = seq1.data[diff_start:diff_end]
+    seq2_segment = seq2.data[diff_start:diff_end]
+
+    replacements = [(i + diff_start, nuc1, nuc2) for i, (nuc1, nuc2) in enumerate(
+        zip(seq1_segment, seq2_segment)) if not nuc1 & nuc2 and (nuc1 or nuc2)]
+
     ins1 = seq1.insertions
     ins2 = seq2.insertions
     common_insertions = {key: (ins1[key], ins2[key])
