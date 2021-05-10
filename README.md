@@ -30,14 +30,14 @@ Then this correspondence is used to translate the position written to the output
 The insertions relative to the reference sequence are written as `n+i`, which means `i`\-th nucleotide inserted after `n`\-th nucleotide of the reference sequence.
 
 ## Reference sequences
-The file `data/references_sequences.ab` contains the reference sequences used for alignment.
+The file `data/references_sequences.tab` contains the reference sequences used for alignment.
 Each lines has the format:
 ```
 sequence_name<Tab>sequence
 ```
 
 ## Scores for alignment
-The file `data/scores.ab` contains the scores used in the sequence alignment.
+The file `data/scores.tab` contains the scores used in the sequence alignment.
 Each line has the format:
 ```
 score_identifier<Tab>value
