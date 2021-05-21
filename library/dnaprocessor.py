@@ -109,7 +109,10 @@ class DnaProcessor():
             table.set_index('specimenid', inplace=True)
         if len(table.columns) < 2:
             raise ValueError("'species' or another column need to be present")
-        table['sequence'] = table['sequence'].apply(Seq.from_str)
+        if self.aligned:
+            table['sequence'] = table['sequence'].apply(Seq.from_str_notrim)
+        else:
+            table['sequence'] = table['sequence'].apply(Seq.from_str)
         self.table = table
         self.infile = infile
 

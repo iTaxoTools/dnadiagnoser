@@ -33,41 +33,43 @@ for i, j in itertools.product(range(0, 16), range(0, 16)):
 aligner = PairwiseAligner(substitution_matrix=score_matrix, end_open_gap_score=END_GAP_PENALTY,
                           end_extend_gap_score=END_GAP_EXTEND_PENALTY, internal_open_gap_score=GAP_PENALTY, internal_extend_gap_score=GAP_EXTEND_PENALTY)
 
-seq_read_dict = dict(
-    A=1,
-    C=2,
-    G=4,
-    T=8,
-    R=5,
-    Y=10,
-    S=6,
-    W=9,
-    K=12,
-    M=3,
-    B=14,
-    D=13,
-    H=11,
-    V=7,
-    N=15
-)
+seq_read_dict = {
+    '-':0,
+    'A':1,
+    'C':2,
+    'G':4,
+    'T':8,
+    'R':5,
+    'Y':10,
+    'S':6,
+    'W':9,
+    'K':12,
+    'M':3,
+    'B':14,
+    'D':13,
+    'H':11,
+    'V':7,
+    'N':15
+}
 
-seq_set_dict = dict(
-    A=frozenset('A'),
-    C=frozenset('C'),
-    G=frozenset('G'),
-    T=frozenset('T'),
-    R=frozenset("AG"),
-    Y=frozenset("CT"),
-    S=frozenset("GC"),
-    W=frozenset("AT"),
-    K=frozenset("GT"),
-    M=frozenset("AC"),
-    B=frozenset("CGT"),
-    D=frozenset("AGT"),
-    H=frozenset("ACT"),
-    V=frozenset("ACG"),
-    N=frozenset("ACGT"),
-)
+seq_set_dict = {
+    '-':frozenset(),
+    'A':frozenset('A'),
+    'C':frozenset('C'),
+    'G':frozenset('G'),
+    'T':frozenset('T'),
+    'R':frozenset("AG"),
+    'Y':frozenset("CT"),
+    'S':frozenset("GC"),
+    'W':frozenset("AT"),
+    'K':frozenset("GT"),
+    'M':frozenset("AC"),
+    'B':frozenset("CGT"),
+    'D':frozenset("AGT"),
+    'H':frozenset("ACT"),
+    'V':frozenset("ACG"),
+    'N':frozenset("ACGT"),
+}
 
 assert(sorted(seq_read_dict.keys()) == sorted(seq_set_dict.keys()))
 
@@ -75,7 +77,7 @@ assert(all(seq_read_dict[key] == reduce(lambda acc, x: acc |
                                         seq_read_dict[x], seq_set_dict[key], 0) for key in seq_read_dict.keys()))
 
 
-seq_write_tuple = ("-",) + tuple(char for char,
+seq_write_tuple = tuple(char for char,
                                  _ in sorted(seq_read_dict.items(), key=lambda x: x[1]))
 
 
@@ -123,6 +125,19 @@ class Seq:
                 raise ValueError(
                     f"Unexpected nucleotide: {sequence[i]}") from ex
         return seq
+
+    @classmethod
+    def from_str_notrim(cls, sequence: str) -> 'Seq':
+        sequence = sequence.upper()
+        seq: Seq = cls(np.empty(len(sequence), dtype="int32"), {})
+        for i, el in enumerate(map(seq_read_dict.get, sequence)):
+            try:
+                seq.data[i] = el
+            except TypeError as ex:
+                raise ValueError(
+                    f"Unexpected nucleotide: {sequence[i]}") from ex
+        return seq
+
 
     def __or__(self, other: 'Seq') -> 'Seq':
         result = Seq(self.data | other.data, merge_insertions(
