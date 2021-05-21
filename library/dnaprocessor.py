@@ -109,7 +109,10 @@ class DnaProcessor():
             table.set_index('specimenid', inplace=True)
         if len(table.columns) < 2:
             raise ValueError("'species' or another column need to be present")
-        table['sequence'] = table['sequence'].apply(Seq.from_str)
+        if self.aligned:
+            table['sequence'] = table['sequence'].apply(Seq.from_str_notrim)
+        else:
+            table['sequence'] = table['sequence'].apply(Seq.from_str)
         self.table = table
         self.infile = infile
 
@@ -149,17 +152,25 @@ class DnaProcessor():
             self.report(table, column, reference_name,
                         lambda i: position_translator[i])
         else:
-            self.report(table, column, reference_name)
+            if not self.aligned:
+                self.report(table, column, reference_name)
+            else:
+                self.report(table, column, None)
 
-    def report(self, table: pd.Series, column: str, reference_name: str, translation: Callable[[int], str] = str) -> None:
+
+    def report(self, table: pd.Series, column: str, reference_name: Optional[str], translation: Callable[[int], str] = str) -> None:
         with self.output("Difference_matrix") as matrixOutput, self.output("Difference_table") as tableOutput, self.output("Differences_description") as textOutput:
             print("", *table.index, sep='\t', file=matrixOutput)
             print(
                 f"{column} 1\t{column} 2\treplacements\tinsertions 1\tinsertions 2", file=tableOutput)
             for species1 in table.index:
                 matrixOutput.write(species1)
-                textOutput.write(
-                    f"Using nucleotide positions in the {reference_name} sequence as a reference, {species1} differs ")
+                if reference_name:
+                    textOutput.write(
+                        f"Using nucleotide positions in the {reference_name} sequence as a reference, {species1} differs ")
+                else:
+                    textOutput.write(
+                        f"{species1} differs ")
                 textFragments = []
                 for species2 in table.index:
                     repl, ins1, ins2 = differences(

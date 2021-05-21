@@ -156,7 +156,7 @@ class DNADiagnoserGUI(ttk.Frame):
     def create_parameters_frame(self) -> None:
         parameters_frame = ttk.LabelFrame(self, text="Parameters")
         self.panes.add(parameters_frame, weight=0)
-        parameters_frame.rowconfigure(4, weight=1)
+        parameters_frame.rowconfigure(5, weight=1)
         parameters_frame.columnconfigure(0, weight=1)
 
         ttk.Label(parameters_frame, text="Reference sequence").grid(
@@ -197,7 +197,7 @@ class DNADiagnoserGUI(ttk.Frame):
         selector_frame = ttk.Frame(frame, padding=3)
         selector_frame.rowconfigure(1, weight=1)
         selector_frame.columnconfigure(0, weight=1)
-        selector_frame.grid(row=4, column=0, sticky='nsew')
+        selector_frame.grid(row=5, column=0, sticky='nsew')
 
         self.column_selector = ColumnSelector(selector_frame)
         self.column_selector.set_columns(
