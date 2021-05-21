@@ -82,8 +82,9 @@ class Listbox():
 
     def __init__(self, parent: tk.Misc, *, height: int, selectmode: str, values: List[str]) -> None:
         self.list = values
+        listvar = tk.StringVar(value=" ".join(value.replace(' ', r'\ ') for value in values))
         self.listbox = tk.Listbox(
-            parent, height=height, selectmode=selectmode, listvariable=tk.StringVar(value=" ".join(values)))
+            parent, height=height, selectmode=selectmode, listvariable=listvar)
         self.grid = self.listbox.grid
 
     def selection(self) -> List[str]:
