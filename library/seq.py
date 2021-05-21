@@ -4,6 +4,7 @@ from functools import reduce
 from Bio.Align import PairwiseAligner
 import itertools
 import os
+import re
 
 with open(os.path.join('data', 'scores.tab')) as scores_file:
     scores_dict = {}
@@ -133,6 +134,11 @@ class Seq:
         for i, el in enumerate(map(seq_read_dict.get, sequence)):
             try:
                 seq.data[i] = el
+                # Calculate start and end of the sequence content
+                if el == 0 and i == seq.start:
+                    seq.start += 1
+                if el != 0:
+                    seq.end = i + 1
             except TypeError as ex:
                 raise ValueError(
                     f"Unexpected nucleotide: {sequence[i]}") from ex
