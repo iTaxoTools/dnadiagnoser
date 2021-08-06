@@ -54,6 +54,8 @@ setup(
     python_requires='>=3.9, <4',
 
     install_requires=[
+        'pandas',
+        'BioPython'
     ],
 
     extras_require={

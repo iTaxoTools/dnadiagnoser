@@ -10,8 +10,9 @@ import tkinter.font as tkfont
 import tkinter.messagebox as tkmessagebox
 import tkinter.filedialog as tkfiledialog
 
-from library.dnaprocessor import references, DnaProcessor
-from library.gui_utils import ColumnSelector
+from .dnaprocessor import references, DnaProcessor
+from .gui_utils import ColumnSelector
+from .resources import get_resource
 
 
 class DNADiagnoserGUI(ttk.Frame):
@@ -21,11 +22,11 @@ class DNADiagnoserGUI(ttk.Frame):
 
         self.images = {}
         self.images["txt_icon"] = tk.PhotoImage(
-            file=os.path.join(sys.path[0], "data/file-text.png"))
+            file=get_resource("file-text.png"))
         self.images["graph_icon"] = tk.PhotoImage(
-            file=os.path.join(sys.path[0], "data/file-graph.png"))
+            file=get_resource("file-graph.png"))
         self.images["log_icon"] = tk.PhotoImage(
-            file=os.path.join(sys.path[0], "data/file-log.png"))
+            file=get_resource("file-log.png"))
         self.preview_dir = preview_dir
 
         self.dnaprocessor = DnaProcessor(self.preview_dir)
@@ -78,14 +79,14 @@ class DNADiagnoserGUI(ttk.Frame):
                 ("run_button", "run.png", "run", 5, self.run_command),
                 ("clear_button", "clear.png", "clear", 6, self.clear_command)):
             self.images[image_key] = tk.PhotoImage(
-                file=os.path.join(sys.path[0], "data", image_file))
+                file=get_resource(image_file))
             ttk.Button(top_frame, text=text,
                        image=self.images[image_key], compound="top", style="Toolbutton", padding=(10, 0), command=command).grid(row=0, column=column, sticky="w")
 
         ttk.Separator(top_frame, orient="vertical").grid(
             row=0, column=7, sticky="nsew")
-        self.images["logo"] = tk.PhotoImage(file=os.path.join(
-            sys.path[0], "data", "iTaxoTools Digital linneaeus MICROLOGO.png"))
+        self.images["logo"] = tk.PhotoImage(
+            file=get_resource("iTaxoTools Digital linneaeus MICROLOGO.png"))
         ttk.Label(top_frame, image=self.images["logo"]).grid(
             row=0, column=8, sticky="nse")
 

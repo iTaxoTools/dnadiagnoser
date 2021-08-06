@@ -8,9 +8,10 @@ from functools import reduce
 import pandas as pd
 import numpy as np
 
-from library.seq import Seq, differences, seq_write_tuple
+from .seq import Seq, differences, seq_write_tuple
+from .resources import get_resource
 
-with open(os.path.join('data', 'reference_sequences.tab')) as file:
+with open(get_resource('reference_sequences.tab')) as file:
     references: Dict[str, Seq] = {}
     for line in file:
         name, _, sequence = line.partition('\t')
@@ -156,7 +157,6 @@ class DnaProcessor():
                 self.report(table, column, reference_name)
             else:
                 self.report(table, column, None)
-
 
     def report(self, table: pd.Series, column: str, reference_name: Optional[str], translation: Callable[[int], str] = str) -> None:
         with self.output("Difference_matrix") as matrixOutput, self.output("Difference_table") as tableOutput, self.output("Differences_description") as textOutput:

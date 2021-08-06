@@ -4,9 +4,10 @@ import sys
 import tempfile
 
 
-from library.gui_utils import *
-from library.dnaprocessor import DnaProcessor
-from library.gui import DNADiagnoserGUI
+from .library.gui_utils import *
+from .library.dnaprocessor import DnaProcessor
+from .library.gui import DNADiagnoserGUI
+from .library.resources import get_resource
 
 
 def launch_gui() -> None:
@@ -18,8 +19,7 @@ def launch_gui() -> None:
 
     root.title("DNAdiagnoser")
     if os.name == "nt":
-        root.wm_iconbitmap(os.path.join(
-            sys.path[0], 'data', 'dnadiagnoser.ico'))
+        root.wm_iconbitmap(get_resource('dnadiagnoser.ico'))
 
     root.protocol("WM_DELETE_WINDOW", close_window)
     root.rowconfigure(0, weight=1)
