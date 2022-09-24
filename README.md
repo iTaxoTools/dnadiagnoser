@@ -29,15 +29,26 @@ The first sequence in the input file is aligned with the chosen reference sequen
 Then this correspondence is used to translate the position written to the output file.
 The insertions relative to the reference sequence are written as `n+i`, which means `i`\-th nucleotide inserted after `n`\-th nucleotide of the reference sequence.
 
+### Command-line mode
+
+Dnadiagnoser include a rudimentary command-line mode. It can be used in the following way:
+```
+dnadiagnoser input_file output_directory [reference_sequence_name]
+```
+
+It will process the `input_file` (which should be in the Tab format)
+and write the output into the directory specified by the path `output_directory`.
+`reference_sequence_name` is an optional argument that specifies the name of the reference sequence.
+
 ## Reference sequences
-The file `data/references_sequences.tab` contains the reference sequences used for alignment.
+The file `src/itaxotools/dnadiagnoser/resources/reference_sequences.tab` contains the reference sequences used for alignment.
 Each lines has the format:
 ```
 sequence_name<Tab>sequence
 ```
 
 ## Scores for alignment
-The file `data/scores.tab` contains the scores used in the sequence alignment.
+The file `src/itaxotools/dnadiagnoser/resources/scores.tab` contains the scores used in the sequence alignment.
 Each line has the format:
 ```
 score_identifier<Tab>value
