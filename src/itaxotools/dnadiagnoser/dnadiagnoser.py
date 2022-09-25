@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 import tempfile
 
 
@@ -19,7 +20,7 @@ def launch_gui() -> None:
 
     root.title("DNAdiagnoser")
     if os.name == "nt":
-        root.wm_iconbitmap(get_resource('dnadiagnoser.ico'))
+        root.wm_iconbitmap(get_resource("dnadiagnoser.ico"))
 
     root.protocol("WM_DELETE_WINDOW", close_window)
     root.rowconfigure(0, weight=1)
@@ -35,11 +36,16 @@ def launch_gui() -> None:
 def main() -> None:
     if len(sys.argv) >= 3:
         input = sys.argv[1]
+        output_dir = sys.argv[2]
+        if not os.path.exists(input) or not os.path.isdir(output_dir):
+            sys.exit(
+                "Usage:\n"
+                "\tdnadiagnoser input_file output_directory [reference_sequence_name]"
+            )
         try:
             reference_name = sys.argv[3]
         except IndexError:
             reference_name = "Homo_sapiens_COI"
-        output_dir = tempfile.mkdtemp()
         processor = DnaProcessor(output_dir)
         processor.process_files(input, reference_name, "species", [])
     else:
